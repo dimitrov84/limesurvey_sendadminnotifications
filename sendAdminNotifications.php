@@ -57,7 +57,10 @@ class sendAdminNotifications extends PluginBase {
         $oRequest=$this->pluginManager->getAPI()->getRequest();
         $sController=Yii::app()->getController()->getId();
 
-        $this->iSurveyId = Yii::app()->request->getParam('surveyid');
+        $this->iSurveyId = (int)Yii::app()->request->getParam('surveyid');
+        if ( !is_numeric($this->iSurveyId) )
+            return; // The SurveyID has to be an Int
+
         if ( $event->get('action')=='tokens' && $event->get('subaction')=='browse' ) {
             // REAL WORK in the tokens browse screen
             $aSubmitNotificationVar=array(
@@ -84,7 +87,10 @@ class sendAdminNotifications extends PluginBase {
             App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/sendnotifications.js'));
         }
         if ( $event->get('action')=='responses' && $event->get('subaction')=='view' ) {
-            $response_id = Yii::app()->request->getParam('id'); // get the resposne ID from 
+            $response_id = (int)Yii::app()->request->getParam('id'); // get the resposne ID from 
+            if ( !is_numeric($response_id) )
+                return; // The response ID is expected to be numeric
+
             // REAL WORK in the Responses browse screen
             $aSubmitNotificationVar=array(
                 'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => get_class(),'surveyid'=>$this->iSurveyId,'function' => 'sendSubmitNotification'))
@@ -108,6 +114,14 @@ class sendAdminNotifications extends PluginBase {
         $oEvent = $this->event;
         $sFunction=$oEvent->get('function');
         $this->iSurveyId=$iSurveyId=$this->api->getRequest()->getParam('surveyid');
+        if ( !is_numeric($this->iSurveyId) ) {
+            $this->sMessage="Invalid Survey ID provided";
+            $this->sStatus="error";
+            $this->displayJson();
+            return;
+        }
+                
+
         $oSurvey=Survey::model()->findByPK($iSurveyId);
         if(!$oSurvey)
             throw new CHttpException(404, gt("The survey does not seem to exist."));
@@ -121,15 +135,37 @@ class sendAdminNotifications extends PluginBase {
         
             // Optionnal parameters : token
             $sToken=(string)Yii::app()->request->getQuery('token', "");
+            $sToken = htmlentities($sToken); // Sanitize the input a bit
+
             // Optionnal parameters : srid
             $iResponseId=(int)Yii::app()->request->getQuery('srid', 0);
+            if ( !is_numeric($iResponseId) ) {
+                $this->sMessage="Invalid Response ID provided";
+                $this->sStatus="error";
+                $this->displayJson();
+                return;
+            }
+
             // Optionnal parameters : tid
             $iTokenID=(int)Yii::app()->request->getQuery('tid', 0);
+            if ( !is_numeric($iTokenID) ) {
+                $this->sMessage="Invalid Token ID provided";
+                $this->sStatus="error";
+                $this->displayJson();
+                return;
+            }
+
 
             // Screen Type can be T (token browse), R (Responses), 
             // The TID in the Token browse correspond to the Token ID
             // The TID int he Responses screen correspond to the Response ID
             $screenType = (string)Yii::app()->request->getQuery('type', "");
+            if ( strtolower($screenType) != "r" && strtolower($screenType) != "t" ) {
+                $this->sMessage="Invalid Input provided for TYPE";
+                $this->sStatus="error";
+                $this->displayJson();
+                return;
+            }
 
             $sNullNoRelevance = $this->get('sNullNoRelevance');
             $bNullNoRelevance =($sNullNoRelevance=="allways" || ($sNullNoRelevance=="deletenonvalues" && Yii::app()->getConfig('deletenonvalues')));
