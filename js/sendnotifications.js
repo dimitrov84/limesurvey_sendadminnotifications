@@ -1,8 +1,14 @@
 $(document).ready( function () {
-    if(typeof sendNotificationVar!='undefined' && typeof surveyIDVar!='undefined'){
-        addSendSubmitNotification_list();
-    }    
+    setTimeout(function setupSendTimeout() { addSendTimeout(); setTimeout(setupSendTimeout,1000); }, 1000);
 });
+
+function addSendTimeout() {
+    if(typeof sendNotificationVar!='undefined' && typeof surveyIDVar!='undefined'){
+        if ( $('a[data-notification="yes"]') == 'undefined' || $('a[data-notification="yes"]').size()<=0 ) {
+            addSendSubmitNotification_list();
+        }
+    }
+}
 
 function addSendSubmitNotification_list() {
     if(typeof screenAction!='undefined' && typeof screenAction!='undefined') {
@@ -14,7 +20,7 @@ function addSendSubmitNotification_list() {
                     if ( id ) {
                         // Find the closest TD
                         $(this).closest('tr').find('.button-column').append(
-                            '<a class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
+                            '<a data-notification="yes" class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
                     }
                 }
             });
@@ -27,7 +33,7 @@ function addSendSubmitNotification_list() {
                     if ( tid ) {
                         // Find the closest TD
                         $(this).closest('tr').find('.button-column').append(
-                            '<a class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+tid+',\'T\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
+                            '<a data-notification="yes" class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+tid+',\'T\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
                     }
                 }
             });
@@ -35,7 +41,7 @@ function addSendSubmitNotification_list() {
         if ( screenAction == 'responses_view' ) {
             // looking for browsermenubarid
             $('#browsermenubarid').children().first().children().first().prepend(
-                '<a class="btn btn-default" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+current_response_id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span> Send Basic/Admin Notification Emails</a>'
+                '<a data-notification="yes" class="btn btn-default" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+current_response_id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span> Send Basic/Admin Notification Emails</a>'
             );
         }
     }
@@ -79,7 +85,7 @@ function sendResponseScreenNotifications_old ( surveyid, responseid, type ) {
                 },
                 error: function(){
                     var $dialog = $('<div id="updatedsrid"></div>')
-                        .html("<p>An error was occured</p>")
+                        .html("<p>We encountered an error</p>")
                         .dialog({
                             title: "Error",
                             dialogClass: 'updatedsrid',
