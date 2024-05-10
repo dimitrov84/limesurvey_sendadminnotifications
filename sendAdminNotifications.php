@@ -21,7 +21,7 @@ class sendAdminNotifications extends PluginBase {
     protected $storage = 'DbStorage';
     static protected $name = 'sendAdminNotifications';
     static protected $description = 'sendAdminNotifications plugin - A plugin to re-trigger the Admin notifications';
-    private $surveyId = -1;
+    private $iSurveyId = -1;
 
     private $bIsAdmin=false;
     private $sStatus="error";
@@ -30,7 +30,7 @@ class sendAdminNotifications extends PluginBase {
     private $iUpdatedValueCount=0;
     private $iNulledValueCount=0;
     private $aUpdatedArray=array();
-    
+
     public function init()
     {
         /**
@@ -45,7 +45,7 @@ class sendAdminNotifications extends PluginBase {
      */
     public function beforeToolsMenuRender_process ( ){
         $event = $this->event;
-    
+        
         /**
              array (
                 'controller' => 'admin',
@@ -56,25 +56,35 @@ class sendAdminNotifications extends PluginBase {
 
         $oRequest=$this->pluginManager->getAPI()->getRequest();
         $sController=Yii::app()->getController()->getId();
+    
+        $qParams = Yii::app()->request->getQueryParams();
+        $this->iSurveyId = is_array($qParams) && isset($qParams['surveyId']) ? htmlspecialchars($qParams['surveyId'], ENT_QUOTES, 'UTF-8') : -1; //Yii::app()->request->getParam('surveyId');
+        if ( $event->get('action')=='tokens' && $event->get('subaction')=='index' ) {
+            // The SurveyID here is not a parameter, but rather part of the URL
+            $url_params = explode("/",Yii::app()->request->getRequestUri());
+            if ( array_search("surveyid",$url_params) ) {
+                $iI = array_search("surveyid",$url_params);
+                if ( count($url_params) > $iI ) {
+                    $this->iSurveyId = htmlspecialchars($url_params[$iI + 1], ENT_QUOTES, 'UTF-8'); // grab the survey ID from the URL
+                }
+            }
 
-        $this->iSurveyId = (int)Yii::app()->request->getParam('surveyid');
-        if ( !is_numeric($this->iSurveyId) )
-            return; // The SurveyID has to be an Int
-
-        if ( $event->get('action')=='tokens' && $event->get('subaction')=='browse' ) {
-            // REAL WORK in the tokens browse screen
-            $aSubmitNotificationVar=array(
-                'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => get_class(),'surveyid'=>$this->iSurveyId,'function' => 'sendSubmitNotification'))
-                //'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => 'sendAdminNotifications', 'function' => 'sendSubmitNotification'))
-            );
-            // inject some global JS variables to make life easier  
-            Yii::app()->getClientScript()->registerScript('aSubmitNotificationVar','sendNotificationVar='.json_encode($aSubmitNotificationVar),CClientScript::POS_BEGIN);
-            Yii::app()->getClientScript()->registerScript('aSurveyIDVar','surveyIDVar='.json_encode($this->iSurveyId),CClientScript::POS_BEGIN);
-            Yii::app()->getClientScript()->registerScript('aScreenAction','screenAction='.json_encode("tokens_browse"),CClientScript::POS_BEGIN);
-            // Inject the JS
-            App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/sendnotifications.js'));
+            if ( $this->iSurveyId != -1 ) {
+                // REAL WORK in the tokens browse screen
+                $aSubmitNotificationVar=array(
+                    'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => get_class(),'surveyid'=>$this->iSurveyId,'function' => 'sendSubmitNotification'))
+                    //'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => 'sendAdminNotifications', 'function' => 'sendSubmitNotification'))
+                );
+                // inject some global JS variables to make life easier  
+                Yii::app()->getClientScript()->registerScript('aSubmitNotificationVar','sendNotificationVar='.json_encode($aSubmitNotificationVar),CClientScript::POS_BEGIN);
+                Yii::app()->getClientScript()->registerScript('aSurveyIDVar','surveyIDVar='.json_encode($this->iSurveyId),CClientScript::POS_BEGIN);
+                Yii::app()->getClientScript()->registerScript('aScreenAction','screenAction='.json_encode("tokens_browse"),CClientScript::POS_BEGIN);
+                //Yii::app()->getClientScript()->registerScript('aPJaxReload', $('#token-grid').on('pjax:end',addSendSubmitNotification_list()), ,CClientScript::POS_BEGIN);
+                // Inject the JS
+                App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/sendnotifications.js'));
+            }
         }
-        if ( $event->get('action')=='responses' && $event->get('subaction')=='browse' ) {
+        if ( $event->get('controller')=='responses' && $event->get('action')=='browse' ) {
             // REAL WORK in the Responses browse screen
             $aSubmitNotificationVar=array(
                 'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => get_class(),'surveyid'=>$this->iSurveyId,'function' => 'sendSubmitNotification'))
@@ -83,14 +93,13 @@ class sendAdminNotifications extends PluginBase {
             Yii::app()->getClientScript()->registerScript('aSubmitNotificationVar','sendNotificationVar='.json_encode($aSubmitNotificationVar),CClientScript::POS_BEGIN);
             Yii::app()->getClientScript()->registerScript('aSurveyIDVar','surveyIDVar='.json_encode($this->iSurveyId),CClientScript::POS_BEGIN);
             Yii::app()->getClientScript()->registerScript('aScreenAction','screenAction='.json_encode("responses_browse"),CClientScript::POS_BEGIN);
+            //Yii::app()->getClientScript()->registerScript('aPJaxReload', $('#responses-grid').on('pjax:end',addSendSubmitNotification_list()), ,CClientScript::POS_BEGIN);
             // Inject the JS
             App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/sendnotifications.js'));
         }
-        if ( $event->get('action')=='responses' && $event->get('subaction')=='view' ) {
-            $response_id = (int)Yii::app()->request->getParam('id'); // get the resposne ID from 
-            if ( !is_numeric($response_id) )
-                return; // The response ID is expected to be numeric
-
+        if ( $event->get('controller')=='responses' && $event->get('action')=='view' ) {
+            $response_id = is_array($qParams) && isset($qParams['id']) ? htmlspecialchars($qParams['id'], ENT_QUOTES, 'UTF-8') : -1; //Yii::app()->request->getParam('id'); // get the resposne ID from 
+            
             // REAL WORK in the Responses browse screen
             $aSubmitNotificationVar=array(
                 'jsonurl'=>$this->api->createUrl('plugins/direct', array('plugin' => get_class(),'surveyid'=>$this->iSurveyId,'function' => 'sendSubmitNotification'))
@@ -113,15 +122,10 @@ class sendAdminNotifications extends PluginBase {
     public function newDirectRequest() {
         $oEvent = $this->event;
         $sFunction=$oEvent->get('function');
-        $this->iSurveyId=$iSurveyId=$this->api->getRequest()->getParam('surveyid');
-        if ( !is_numeric($this->iSurveyId) ) {
-            $this->sMessage="Invalid Survey ID provided";
-            $this->sStatus="error";
-            $this->displayJson();
-            return;
-        }
-                
 
+        $qParams = Yii::app()->request->getQueryParams();
+
+        $this->iSurveyId=$iSurveyId=is_array($qParams) && isset($qParams['surveyid']) ? htmlspecialchars($qParams['surveyid'], ENT_QUOTES, 'UTF-8') : -1; //$this->api->getRequest()->getParam('surveyid');
         $oSurvey=Survey::model()->findByPK($iSurveyId);
         if(!$oSurvey)
             throw new CHttpException(404, gt("The survey does not seem to exist."));
@@ -135,44 +139,21 @@ class sendAdminNotifications extends PluginBase {
         
             // Optionnal parameters : token
             $sToken=(string)Yii::app()->request->getQuery('token', "");
-            $sToken = htmlentities($sToken); // Sanitize the input a bit
-
             // Optionnal parameters : srid
             $iResponseId=(int)Yii::app()->request->getQuery('srid', 0);
-            if ( !is_numeric($iResponseId) ) {
-                $this->sMessage="Invalid Response ID provided";
-                $this->sStatus="error";
-                $this->displayJson();
-                return;
-            }
-
             // Optionnal parameters : tid
             $iTokenID=(int)Yii::app()->request->getQuery('tid', 0);
-            if ( !is_numeric($iTokenID) ) {
-                $this->sMessage="Invalid Token ID provided";
-                $this->sStatus="error";
-                $this->displayJson();
-                return;
-            }
-
 
             // Screen Type can be T (token browse), R (Responses), 
             // The TID in the Token browse correspond to the Token ID
             // The TID int he Responses screen correspond to the Response ID
             $screenType = (string)Yii::app()->request->getQuery('type', "");
-            if ( strtolower($screenType) != "r" && strtolower($screenType) != "t" ) {
-                $this->sMessage="Invalid Input provided for TYPE";
-                $this->sStatus="error";
-                $this->displayJson();
-                return;
-            }
 
             $sNullNoRelevance = $this->get('sNullNoRelevance');
             $bNullNoRelevance =($sNullNoRelevance=="allways" || ($sNullNoRelevance=="deletenonvalues" && Yii::app()->getConfig('deletenonvalues')));
             $aSurveyInfo=getSurveyInfo($iSurveyId);
             $bError=false;
             $sMessage="";
-    
             
             if($sToken && !(tableExists('{{tokens_'.$aSurveyInfo['sid'].'}}') || $aSurveyInfo['anonymized']!="N"))
             {
@@ -240,7 +221,59 @@ class sendAdminNotifications extends PluginBase {
                 if(isset($oResponse->token) && $oResponse->token)
                     $sToken=$oResponse->token;
                 // Fill $_SESSION['survey_'.$iSurveyId]
-                buildsurveysession($iSurveyId);
+                // buildsurveysession($iSurveyId);
+
+
+                // ------------------------- this code is from the frontend_helper -> function buildsurveysession
+                // We can't use the buildsurveysession function directly due to template -> controller inclusion issue
+                $thissurvey = getSurveyInfo($iSurveyId, $sLangCode);
+                $survey = Survey::model()->findByPk($iSurveyId);
+                resetAllSessionVariables($iSurveyId);
+                
+                UpdateGroupList($iSurveyId, $_SESSION['survey_' . $iSurveyId]['s_lang']);
+
+                $totalquestions               = $survey->countTotalQuestions;
+                $iTotalGroupsWithoutQuestions = QuestionGroup::model()->getTotalGroupsWithoutQuestions($iSurveyId);
+
+                $_SESSION['survey_' . $iSurveyId]['totalquestions'] = $survey->countInputQuestions;
+
+                // 2. SESSION VARIABLE: totalsteps
+                setTotalSteps($iSurveyId, $thissurvey, $totalquestions);
+
+                // Break out and crash if there are no questions!
+                if (($totalquestions == 0 || $iTotalGroupsWithoutQuestions > 0) && !$preview) {
+                    breakOutAndCrash($sTemplateViewPath, $totalquestions, $iTotalGroupsWithoutQuestions, $thissurvey);
+                }
+
+                //3. SESSION VARIABLE - insertarray
+                //An array containing information about used to insert the data into the db at the submit stage
+                //4. SESSION VARIABLE - fieldarray
+                //See rem at end..
+
+                if ($tokensexist == 1 && $clienttoken) {
+                    $_SESSION['survey_' . $iSurveyId]['token'] = $clienttoken;
+                }
+
+                if ($thissurvey['anonymized'] == "N") {
+                    $_SESSION['survey_' . $iSurveyId]['insertarray'][] = "token";
+                }
+
+                $fieldmap = $_SESSION['survey_' . $iSurveyId]['fieldmap'] = createFieldMap($survey, 'full', true, false, $_SESSION['survey_' . $iSurveyId]['s_lang']);
+
+                // first call to initFieldArray
+                initFieldArray($iSurveyId, $fieldmap);
+
+                // Prefill questions/answers from command line params
+                prefillFromCommandLine($iSurveyId);
+
+                if (isset($_SESSION['survey_' . $iSurveyId]['fieldarray'])) {
+                    $_SESSION['survey_' . $iSurveyId]['fieldarray'] = array_values($_SESSION['survey_' . $iSurveyId]['fieldarray']);
+                }
+            
+                //Check if a passthru label and value have been included in the query url
+                checkPassthruLabel($iSurveyId, $preview, $fieldmap);
+
+                // -------------------------------------------------------------
 
                 $_SESSION['survey_'.$iSurveyId]['srid']=$iResponseId;
                 if(isset($oResponse->startlanguage ) && $oResponse->startlanguage )

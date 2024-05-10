@@ -1,14 +1,11 @@
-$(document).ready( function () {
-    setTimeout(function setupSendTimeout() { addSendTimeout(); setTimeout(setupSendTimeout,1000); }, 1000);
-});
-
-function addSendTimeout() {
+$(document).on('pjax:scriptcomplete ready', function () {
     if(typeof sendNotificationVar!='undefined' && typeof surveyIDVar!='undefined'){
-        if ( $('a[data-notification="yes"]') == 'undefined' || $('a[data-notification="yes"]').size()<=0 ) {
-            addSendSubmitNotification_list();
+        if ( surveyIDVar.indexOf("?")>0 ) {
+            surveyIDVar = surveyIDVar.substring(0,surveyIDVar.indexOf("?"));
         }
-    }
-}
+        addSendSubmitNotification_list();
+    }    
+});
 
 function addSendSubmitNotification_list() {
     if(typeof screenAction!='undefined' && typeof screenAction!='undefined') {
@@ -19,8 +16,20 @@ function addSendSubmitNotification_list() {
                 if ( row_id !== 'id_all' ) {
                     if ( id ) {
                         // Find the closest TD
-                        $(this).closest('tr').find('.button-column').append(
-                            '<a data-notification="yes" class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
+                        div_id = $(this).closest('tr').find('div.ls-action_dropdown').prop('id');
+                        div_id = div_id.replace("dropdown","dropdownmenu");
+                        if ( $('#'+div_id).children().find('a.send-submit-notification').length < 1 ) {
+                            $('#'+div_id).prepend(
+                                '<li><a class="dropdown-item send-submit-notification" role="button" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+id+',\'R\');"><i class="fa fa-share-square"></i>Send Basic AND Detailed Admin Notification Emails</a></li>');
+                        }
+                        else {
+                            //$.pjax.reload('#'+div_id);                            
+                            $('ul[id="'+div_id+'"]').each(function() {
+                                $(this).children().find('a.send-submit-notification').remove();
+                                $(this).prepend(
+                                    '<li><a class="dropdown-item send-submit-notification" role="button" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+id+',\'R\');"><i class="fa fa-share-square"></i>Send Basic AND Detailed Admin Notification Emails</a></li>');
+                            });
+                        }
                     }
                 }
             });
@@ -32,17 +41,32 @@ function addSendSubmitNotification_list() {
                 if ( row_id !== 'tid_all' ) {
                     if ( tid ) {
                         // Find the closest TD
-                        $(this).closest('tr').find('.button-column').append(
-                            '<a data-notification="yes" class="btn btn-default btn-xs" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+tid+',\'T\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span></a>');
+                        div_id = $(this).closest('tr').find('div.ls-action_dropdown').prop('id');
+                        div_id = div_id.replace("dropdown","dropdownmenu");
+                        if ( $('#'+div_id).children().find('a.send-submit-notification').length < 1 ) {
+                            $('#'+div_id).prepend(
+                                '<div class="send-submit-notification" data-bs-toggle="tooltip" title="" data-bs-original-title=""><li><a class="dropdown-item send-submit-notification" role="button" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+tid+',\'T\');"><i class="fa fa-share-square"></i>Send Basic AND Detailed Admin Notification Emails</a></li></div>');
+                        }
+                        else {
+                            //$.pjax.reload('#'+div_id);
+                            $('ul[id="'+div_id+'"]').each(function() {
+                                $(this).children().find('div.send-submit-notification').remove();
+                                $(this).prepend(
+                                    '<div class="send-submit-notification" data-bs-toggle="tooltip" title="" data-bs-original-title=""><li><a class="dropdown-item send-submit-notification" role="button" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+tid+',\'T\');"><i class="fa fa-share-square"></i>Send Basic AND Detailed Admin Notification Emails</a></li></div>');
+                            });
+                            
+                        }
                     }
                 }
             });
         }
         if ( screenAction == 'responses_view' ) {
             // looking for browsermenubarid
-            $('#browsermenubarid').children().first().children().first().prepend(
-                '<a data-notification="yes" class="btn btn-default" data-toggle="tooltip" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+current_response_id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span> Send Basic/Admin Notification Emails</a>'
-            );
+            if ( $('div.ls-topbar-buttons').children('#send-submit-notification-button').length < 1 ) {
+                $('div.ls-topbar-buttons').first().prepend(
+                    '<a id="send-submit-notification-button" class="btn btn-outline-secondary" title="" rel="tooltip" onClick="sendResponseScreenNotifications_old ('+surveyIDVar+','+current_response_id+',\'R\');" data-original-title="Send Basic AND Detailed Admin Notification Emails"><span class="sr-only">Send Basic AND Detailed Admin Notification Emails</span><span class="fa fa-share-square" aria-hidden="true"></span> Send Basic/Admin Notification Emails</a>'
+                );
+            }
         }
     }
 }
@@ -71,12 +95,12 @@ function sendResponseScreenNotifications_old ( surveyid, responseid, type ) {
                             dialogClass: 'updatedsrid',
                             buttons: { 
                                 "Ok": function() { 
-					$(this).dialog("close");
-					//$("#sendnotification_img_"+responseid).attr("src", "/limesurvey/styles/blobblueish/images/emailtemplates_30.png");
-		        	//	$("#sendnotification_img_"+responseid).attr("width", size);  
-				},
-                                //"Reload": function() { window.location.reload(); } 
+                                    $(this).dialog("close");
+                                    //$("#sendnotification_img_"+responseid).attr("src", "/limesurvey/styles/blobblueish/images/emailtemplates_30.png");
+                                    //	$("#sendnotification_img_"+responseid).attr("width", size);  
                                 },
+                                //"Reload": function() { window.location.reload(); } 
+                            },
                             modal: true,
                             close: function () {
                                 $(this).remove();
@@ -85,16 +109,16 @@ function sendResponseScreenNotifications_old ( surveyid, responseid, type ) {
                 },
                 error: function(){
                     var $dialog = $('<div id="updatedsrid"></div>')
-                        .html("<p>We encountered an error</p>")
+                        .html("<p>An error was occured</p>")
                         .dialog({
                             title: "Error",
                             dialogClass: 'updatedsrid',
                             buttons: { 
                                 "Ok": function() { 
-					$(this).dialog("close"); 
-					//$("#sendnotification_img_"+responseid).attr("src", "/limesurvey/styles/blobblueish/images/emailtemplates_30.png");
-                    //                    $("#sendnotification_img_"+responseid).attr("width", size);
-				},
+                                    $(this).dialog("close"); 
+                                    //$("#sendnotification_img_"+responseid).attr("src", "/limesurvey/styles/blobblueish/images/emailtemplates_30.png");
+                                    //                    $("#sendnotification_img_"+responseid).attr("width", size);
+                                },
                             },
                             modal: true,
                             close: function () {

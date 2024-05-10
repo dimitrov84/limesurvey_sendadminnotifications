@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <metadata>
+        <name>sendAdminNotifications</name>
+        <type>plugin</type>
+        <creationDate></creationDate>
+        <lastUpdate>2024-05-08</lastUpdate>
+        <author>Dimitar Dimitrov</author>
+        <authorUrl>https://github.com/dimitrov84</authorUrl>
+        <supportUrl>https://github.com/dimitrov84</supportUrl>
+        <version>3.0.0</version>
+        <license>Apache Version 2</license>
+        <description><![CDATA[LimeSurvey plugin to send / re-send Basic and Detailed Admin Notifications for surveys.]]></description>
+    </metadata>
+    <compatibility>
+        <version>6</version>
+    </compatibility>
+</config>
